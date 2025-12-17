@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>能量心力深度诊断报告</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { background: #080808; color: #a3a3a3; font-family: sans-serif; }
+        .glass-card { background: #111; border: 1px solid #222; }
+        input[type="radio"] { accent-color: #fff; width: 1.2rem; height: 1.2rem; cursor: pointer; }
+        .btn-primary { background: #fff; color: #000; font-weight: 800; cursor: pointer; }
+        .modal { background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); display: none; position: fixed; inset: 0; z-index: 100; align-items: center; justify-content: center; }
+        .dimension-row { border-bottom: 1px solid #1a1a1a; padding: 12px 0; }
+    </style>
+</head>
+<body class="py-12 px-4">
+
+    <div id="mainContent" class="max-w-2xl mx-auto">
+        <header class="mb-16 border-l-4 border-white pl-6">
+            <h1 class="text-3xl font-black text-white tracking-tighter mb-2">能量心力系统审计</h1>
+            <p class="text-sm italic">“为模糊的疲惫找一个科学解释”</p>
+        </header>
+
+        <div id="quizForm">
+            <div id="quizContainer" class="space-y-12">
+                </div>
+            <div class="mt-20">
+                <button onclick="generateReport()" class="w-full btn-primary py-6 rounded-none uppercase tracking-widest text-sm">
+                    点击查看报告
+                </button>
+            </div>
+        </div>
+
+        <div id="resultSection" class="hidden">
+            <div class="text-center mb-10">
+                <h2 class="text-5xl font-black text-white tracking-tighter mb-2" id="finalLevel">--</h2>
+                <p class="text-sm text-white/60">系统负重状态评估结论</p>
+            </div>
+
+            <div class="glass-card p-6 rounded-sm mb-10">
+                <div class="relative h-[300px] mb-10">
+                    <canvas id="radarChart"></canvas>
+                </div>
+                
+                <div class="space-y-4">
+                    <h3 class="text-white text-xs font-bold uppercase tracking-widest mb-4 border-b border-white/10 pb-2">维度负载 Breakdown</h3>
+                    <div id="dimensionDetails"></div>
+                </div>
+
+                <div class="mt-10 pt-8 border-t border-white/10 text-sm leading-relaxed">
+                    <p id="adviceText" class="text-white/50"></p>
+                </div>
+            </div>
+
+            <button onclick="openModal()" class="w-full bg-white text-black font-black py-6 rounded-none flex items-center justify-center gap-2">
+                解锁你的个性精力优化方案
+            </button>
+        </div>
+    </div>
+
+    <div id="qrModal" class="modal" onclick="closeModal()">
+        <div class="bg-[#111] p-10 border border-white/20 text-center max-w-sm mx-4" onclick="event.stopPropagation()">
+            <h3 class="text-white font-bold mb-4 uppercase text-sm tracking-widest">扫码领取重构方案</h3>
+            <img src="https://via.placeholder.com/250x250?text=YOUR+QR+CODE" alt="企业微信" class="mx-auto mb-6">
+            <p class="text-[10px] text-white/40 uppercase">添加架构师助手<br>获取针对性 1 对 1 深度建议</p>
+            <button onclick="closeModal()" class="mt-8 text-xs text-white/20 underline">关闭窗口</button>
+        </div>
+    </div>
+
+    <script>
+        const quizData = [
+            { cat: "启动负重", q: "闹钟响后，在脑子里已经把今天所有的活儿‘预痛苦’了一遍，甚至想原地消失？" },
+            { cat: "启动负重", q: "坐在电脑前，即便知道要做什么，也必须先刷 10 分钟手机才能正式开始？" },
+            { cat: "启动负重", q: "盯着电脑锁屏界面，知道密码但就是不想敲进去，感觉灵魂正在外包？" },
+            { cat: "启动负重", q: "从任务 A 切换到任务 B 时，中间需要很长的‘空转期’来平复心态？" },
+            { cat: "运行内存", q: "脑子里像关不掉的网页广告，连刷短视频时都在弹窗：‘那个活儿是不是快到期了？’" },
+            { cat: "运行内存", q: "正想干点正事，突然一个消息进来，你瞬间感觉整个 CPU 烧坏了？" },
+            { cat: "运行内存", q: "每天除了干活，还得消耗大量心力在‘好的、收到、辛苦了’这种礼貌性内耗中？" },
+            { cat: "运行内存", q: "收藏夹存满了‘以后看’的文章，但每看一眼都感到‘进度欠费’的恐慌？" },
+            { cat: "运行内存", q: "一旦被下属或同事的琐事临时打断，会产生极度强烈的生理性烦躁？" },
+            { cat: "卸载复位", q: "明明困得不行，但就是舍不得放下手机。因为只有深夜这两小时，你才属于你自己？" },
+            { cat: "卸载复位", q: "躺下后，大脑自动开始‘垃圾回收’：今天哪句话说得像个傻子？那个人是不是对我有意见？" },
+            { cat: "卸载复位", q: "下班后看到不熟悉的来电，会产生一种生理性的焦虑、反胃甚至想拒接？" },
+            { cat: "卸载复位", q: "即便在休息，肩膀、颈椎或眉头依然习惯性地锁死，无法进入松弛状态？" },
+            { cat: "卸载复位", q: "关掉消息提醒会产生负罪感，总觉得‘没及时回复’就是一种失职？" },
+            { cat: "系统架构", q: "忙了一整天，下班走在路上突然恍神：我这一天到底在忙什么？我这辈子就在这儿耗着了吗？" },
+            { cat: "系统架构", q: "甚至连‘晚饭吃什么’这种决策都让你崩溃，因为决策额度已在白天耗尽？" },
+            { cat: "系统架构", q: "潜意识里渴望生一场小病（不致命但得住院），以此获得合法的‘关机’理由？" },
+            { cat: "系统架构", q: "对周末或假期的期待感显著下降，觉得反正最后也是‘换个地方躺平空转’？" }
+        ];
+
+        // 渲染题目
+        const container = document.getElementById('quizContainer');
+        quizData.forEach((item, i) => {
+            container.innerHTML += `
+                <div class="pb-8 border-b border-white/5">
+                    <p class="text-sm text-white/80 mb-6 leading-relaxed">${i + 1}. ${item.q}</p>
+                    <div class="flex justify-between items-center px-2">
+                        <span class="text-[9px] uppercase text-white/30">Never</span>
+                        <div class="flex gap-4 md:gap-8">
+                            <input type="radio" name="q${i}" value="5">
+                            <input type="radio" name="q${i}" value="3">
+                            <input type="radio" name="q${i}" value="1">
+                            <input type="radio" name="q${i}" value="0">
+                        </div>
+                        <span class="text-[9px] uppercase text-white/30">Always</span>
+                    </div>
+                </div>`;
+        });
+
+        function generateReport() {
+            let scores = [0, 0, 0, 0];
+            let answeredCount = 0;
+
+            quizData.forEach((_, i) => {
+                const checked = document.querySelector(`input[name="q${i}"]:checked`);
+                if(checked) {
+                    const val = parseInt(checked.value);
+                    if(i < 4) scores[0] += val;
+                    else if(i < 9) scores[1] += val;
+                    else if(i < 14) scores[2] += val;
+                    else scores[3] += val;
+                    answeredCount++;
+                }
+            });
+
+            if(answeredCount < 18) {
+                alert("请完成全部 18 项系统指标检测。");
+                return;
+            }
+
+            // 切换显示
+            document.getElementById('quizForm').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+            window.scrollTo(0, 0);
+
+            // 填充详细维度报告
+            const labels = ['启动负荷', '运行内存', '卸载复位', '底层架构'];
+            const maxScores = [20, 25, 25, 20];
+            const detailsDiv = document.getElementById('dimensionDetails');
+            detailsDiv.innerHTML = '';
+
+            scores.forEach((s, i) => {
+                const load = Math.round((1 - s/maxScores[i]) * 100);
+                detailsDiv.innerHTML += `
+                    <div class="dimension-row flex justify-between items-center text-xs">
+                        <span class="font-bold text-white/70">${labels[i]}</span>
+                        <div class="flex gap-4">
+                            <span class="${load > 60 ? 'text-white' : 'text-white/40'}">${load > 60 ? '极高负载' : '正常损耗'}</span>
+                            <span class="text-white">${load}%</span>
+                        </div>
+                    </div>`;
+            });
+
+            // 判定等级
+            const total = scores.reduce((a,b) => a+b, 0);
+            document.getElementById('finalLevel').innerText = total > 65 ? "正常运行" : total > 45 ? "代补偿运行" : "系统过载";
+            document.getElementById('adviceText').innerText = `归因分析：你的系统瓶颈主要集中在【${labels[scores.indexOf(Math.min(...scores))]}】。当前的疲惫并非能力不足，而是因为你的心力缓存已经满载，触发了神经系统的“自我限流保护”。`;
+
+            // 初始化雷达图
+            if (typeof Chart !== 'undefined') {
+                const ctx = document.getElementById('radarChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: scores.map((s, i) => (s/maxScores[i])*100),
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            borderColor: '#ffffff',
+                            borderWidth: 1,
+                            pointRadius: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { 
+                            r: { 
+                                min: 0, max: 100, 
+                                ticks: { display: false },
+                                grid: { color: 'rgba(255,255,255,0.1)' },
+                                pointLabels: { color: '#fff', font: { size: 10 } }
+                            } 
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+        }
+
+        function openModal() { document.getElementById('qrModal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('qrModal').style.display = 'none'; }
+    </script>
+</body>
+</html>
